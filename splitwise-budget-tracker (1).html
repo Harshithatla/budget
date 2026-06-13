@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Splitwise — Personal Budget Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F3;
+  --surface:#FFFFFF;
+  --surface2:#F0EFE9;
+  --border:#E2E0D8;
+  --text:#1A1A18;
+  --text2:#6B6A65;
+  --text3:#9E9D98;
+  --green:#0D7A5F;
+  --green-bg:#E8F5F0;
+  --amber:#9A5C0A;
+  --amber-bg:#FEF3E2;
+  --red:#B53030;
+  --red-bg:#FDEAEA;
+  --blue:#1A5FA0;
+  --blue-bg:#EAF1FB;
+  --purple:#5B46B8;
+  --purple-bg:#EFEDFC;
+  --radius:10px;
+  --radius-sm:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;min-height:100vh}
+h1,h2,h3{font-weight:600;line-height:1.3}
+
+/* Layout */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;max-width:1100px;margin:0 auto}
+@media(max-width:720px){.shell{grid-template-columns:1fr}}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+@media(max-width:720px){.sidebar{display:none}}
+.main{padding:2rem 2rem 4rem;display:flex;flex-direction:column;gap:2rem}
+
+/* Sidebar */
+.logo{font-size:17px;font-weight:600;padding:.5rem .75rem;margin-bottom:.5rem;letter-spacing:-.3px}
+.logo span{color:var(--green)}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:var(--radius-sm);border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text2);font-family:'Inter',sans-serif;width:100%;text-align:left;transition:background .12s,color .12s}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:var(--green-bg);color:var(--green);font-weight:500}
+.nav-icon{width:18px;height:18px;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border)}
+.month-label{font-size:12px;color:var(--text3);padding:.5rem .75rem}
+
+/* Mobile nav */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:.5rem;z-index:100;gap:4px}
+@media(max-width:720px){.mobile-nav{display:flex}}
+.mob-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:.5rem;border:none;background:transparent;cursor:pointer;font-size:10px;color:var(--text3);font-family:'Inter',sans-serif;border-radius:var(--radius-sm);transition:color .12s}
+.mob-btn.active{color:var(--green)}
+.mob-btn svg{width:20px;height:20px}
+
+/* Views */
+.view{display:none}
+.view.active{display:flex;flex-direction:column;gap:1.5rem}
+
+/* Page header */
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.page-title{font-size:20px;font-weight:600}
+.month-switcher{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.month-switcher button{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;font-size:13px;color:var(--text);transition:background .12s}
+.month-switcher button:hover{background:var(--surface2)}
+.month-display{font-weight:500;color:var(--text);min-width:80px;text-align:center}
+
+/* Metric cards */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem;box-shadow:var(--shadow)}
+.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:.35rem;font-weight:500}
+.metric-value{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;letter-spacing:-.5px}
+.metric-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.c-green{color:var(--green)}
+.c-amber{color:var(--amber)}
+.c-red{color:var(--red)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.card-body{padding:0}
+
+/* Expense list */
+.expense-row{display:flex;align-items:center;gap:12px;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);transition:background .1s}
+.expense-row:last-child{border-bottom:none}
+.expense-row:hover{background:var(--surface2)}
+.cat-dot{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px}
+.exp-name{font-size:14px;font-weight:500;color:var(--text)}
+.exp-meta{font-size:12px;color:var(--text3);margin-top:1px}
+.exp-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;white-space:nowrap}
+.exp-right{text-align:right;flex-shrink:0}
+.exp-owed{font-size:11px;color:var(--green);margin-top:2px}
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;vertical-align:middle;margin-left:6px}
+.pill-pending{background:var(--amber-bg);color:var(--amber)}
+.pill-settled{background:var(--green-bg);color:var(--green)}
+.exp-info{flex:1;min-width:0}
+.empty-state{padding:3rem 1.25rem;text-align:center;color:var(--text3);font-size:14px}
+.empty-state p{margin-top:.5rem;font-size:13px}
+
+/* Add btn */
+.add-row{display:flex;justify-content:flex-end;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:.55rem 1rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;color:var(--text);transition:background .12s,border-color .12s;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn-primary{background:var(--text);color:var(--surface);border-color:var(--text)}
+.btn-primary:hover{background:#333}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:#F4C5C5}
+.btn-danger:hover{background:#FDDADA}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.15);overflow:hidden}
+.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{border:none;background:none;cursor:pointer;color:var(--text3);font-size:20px;padding:2px;line-height:1;transition:color .12s}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:14px}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:12px;font-weight:500;color:var(--text2)}
+.form-field input,.form-field select,.form-field textarea{border:1px solid var(--border);border-radius:var(--radius-sm);padding:.55rem .75rem;font-size:14px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--text);outline:none;transition:border-color .12s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green)}
+.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:11px;color:var(--text3)}
+
+/* Splits view */
+.split-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.1rem 1.25rem}
+.split-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.split-person{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--purple-bg);color:var(--purple);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.split-name{font-size:15px;font-weight:600}
+.split-amount{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--amber)}
+.split-items{font-size:12px;color:var(--text3);margin-bottom:.75rem}
+.splits-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.no-splits{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3rem;text-align:center;color:var(--text3)}
+
+/* Budget bars */
+.budget-row{margin-bottom:1.1rem}
+.budget-meta{display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px}
+.budget-name{font-weight:500}
+.budget-nums{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)}
+.budget-track{height:8px;background:var(--surface2);border-radius:20px;overflow:hidden}
+.budget-fill{height:100%;border-radius:20px;transition:width .4s}
+
+/* Category chart */
+.chart-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chart-lbl{font-size:12px;color:var(--text2);width:110px;text-align:right;flex-shrink:0}
+.chart-track{flex:1;height:22px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.chart-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;transition:width .5s}
+.chart-val{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
+
+/* Settings */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);gap:1rem;flex-wrap:wrap}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:14px;font-weight:500}
+.settings-desc{font-size:12px;color:var(--text3);margin-top:2px}
+.settings-control input{border:1px solid var(--border);border-radius:var(--radius-sm);padding:.4rem .6rem;font-size:14px;font-family:'DM Mono',monospace;width:110px;text-align:right;background:var(--surface);color:var(--text);outline:none}
+.settings-control input:focus{border-color:var(--green)}
+
+/* Toast */
+.toast{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:.6rem 1.2rem;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;z-index:300;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* Month-over-month */
+.mom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}
+.mom-card{background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem;text-align:center}
+.mom-month{font-size:11px;color:var(--text3);margin-bottom:4px}
+.mom-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
+.mom-current{background:var(--green-bg)}
+.mom-current .mom-val{color:var(--green)}
+
+/* Friend chips */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .12s;user-select:none}
+.chip:hover{border-color:#0D7A5F;color:#0D7A5F}
+.chip.selected{background:var(--green-bg);border-color:#0D7A5F;color:#0D7A5F}
+.chip-remove{font-size:15px;color:var(--text3);line-height:1;cursor:pointer;padding:0 2px}
+.chip-remove:hover{color:var(--red)}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">split<span>wise</span></div>
+    <button class="nav-btn active" onclick="showView('overview',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </button>
+    <button class="nav-btn" onclick="showView('expenses',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Expenses
+    </button>
+    <button class="nav-btn" onclick="showView('splits',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Splits
+    </button>
+    <button class="nav-btn" onclick="showView('insights',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Insights
+    </button>
+    <button class="nav-btn" onclick="showView('budget',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Budget limits
+    </button>
+    <button class="nav-btn" onclick="showView('settings',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Settings
+    </button>
+    <div class="sidebar-footer">
+      <div class="month-label" id="sidebar-month"></div>
+      <div id="sync-status" style="padding:.4rem .75rem;font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px"></div>
+      <button id="sign-out-btn" class="nav-btn" style="display:none;color:var(--red);font-size:13px" onclick="signOut()">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign out
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="view-overview" class="view active">
+      <div class="page-header">
+        <h1 class="page-title">Overview</h1>
+        <div class="month-switcher">
+          <button onclick="prevMonth()">‹</button>
+          <span class="month-display" id="month-display"></span>
+          <button onclick="nextMonth()">›</button>
+        </div>
+      </div>
+      <div class="metrics" id="metrics"></div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent expenses</span>
+          <button class="btn" onclick="openAddModal()">+ Add expense</button>
+        </div>
+        <div class="card-body" id="recent-expenses"></div>
+      </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div id="view-expenses" class="view">
+      <div class="page-header">
+        <h1 class="page-title">All expenses</h1>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="month-switcher">
+            <button onclick="prevMonth()">‹</button>
+            <span class="month-display2" id="month-display2"></span>
+            <button onclick="nextMonth()">›</button>
+          </div>
+          <select id="filter-cat" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:.45rem .6rem;font-size:13px;background:var(--surface);color:var(--text);outline:none;cursor:pointer" onchange="renderAll()">
+            <option value="">All categories</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="utilities">Utilities</option>
+            <option value="shopping">Shopping</option>
+            <option value="health">Health</option>
+            <option value="other">Other</option>
+          </select>
+          <button class="btn btn-primary" onclick="openAddModal()">+ Add expense</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" id="all-expenses"></div>
+      </div>
+    </div>
+
+    <!-- SPLITS -->
+    <div id="view-splits" class="view">
+      <div class="page-header">
+        <h1 class="page-title">Splits</h1>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add expense</button>
+      </div>
+      <div id="splits-summary" class="metrics"></div>
+      <div class="splits-grid" id="splits-list"></div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div id="view-insights" class="view">
+      <div class="page-header">
+        <h1 class="page-title">Insights</h1>
+        <div class="month-switcher">
+          <button onclick="prevMonth()">‹</button>
+          <span class="month-display" id="month-display3"></span>
+          <button onclick="nextMonth()">›</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Spending by category</span></div>
+        <div style="padding:1.25rem" id="cat-chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Month over month</span></div>
+        <div style="padding:1.25rem"><div class="mom-grid" id="mom-grid"></div></div>
+      </div>
+    </div>
+
+    <!-- BUDGET -->
+    <div id="view-budget" class="view">
+      <div class="page-header">
+        <h1 class="page-title">Budget limits</h1>
+        <div class="month-switcher">
+          <button onclick="prevMonth()">‹</button>
+          <span class="month-display" id="month-display4"></span>
+          <button onclick="nextMonth()">›</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Category limits</span></div>
+        <div style="padding:1.25rem" id="budget-bars"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="view-settings" class="view">
+      <div class="page-header"><h1 class="page-title">Settings</h1></div>
+      <div class="settings-section">
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Currency symbol</div>
+            <div class="settings-desc">Shown next to all amounts</div>
+          </div>
+          <div class="settings-control"><input type="text" id="set-currency" maxlength="3" onchange="saveSetting('currency',this.value);renderAll()"></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Monthly budget</div>
+            <div class="settings-desc">Your overall monthly spending target</div>
+          </div>
+          <div class="settings-control"><input type="number" id="set-budget" min="0" onchange="saveSetting('monthlyBudget',parseFloat(this.value)||0);renderAll()"></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Category limits</div>
+            <div class="settings-desc">Set per-category monthly limits in the Budget limits tab</div>
+          </div>
+          <div><button class="btn" onclick="showView('budget',null)">Go to budget →</button></div>
+        </div>
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:.75rem">
+          <div>
+            <div class="settings-label">Friends / roommates</div>
+            <div class="settings-desc">Saved names appear as tap-to-select chips when adding expenses</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;width:100%" id="settings-friend-chips"></div>
+          <div style="display:flex;gap:8px;width:100%">
+            <input type="text" id="new-friend-name" placeholder="Add a name…" maxlength="30" style="flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:.45rem .7rem;font-size:14px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--text);outline:none" onkeydown="if(event.key==='Enter')addFriend()">
+            <button class="btn btn-primary" onclick="addFriend()">Add</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Export data</div>
+            <div class="settings-desc">Download all expenses as CSV</div>
+          </div>
+          <div><button class="btn" onclick="exportCSV()">Export CSV</button></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Clear all data</div>
+            <div class="settings-desc">Remove all expenses and reset settings</div>
+          </div>
+          <div><button class="btn btn-danger" onclick="clearAll()">Clear data</button></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Mobile nav -->
+<nav class="mobile-nav">
+  <button class="mob-btn active" onclick="showView('overview',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Home
+  </button>
+  <button class="mob-btn" onclick="showView('expenses',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Expenses
+  </button>
+  <button class="mob-btn" onclick="openAddModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Add
+  </button>
+  <button class="mob-btn" onclick="showView('splits',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Splits
+  </button>
+  <button class="mob-btn" onclick="showView('insights',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Insights
+  </button>
+</nav>
+
+<!-- Add/Edit Expense Modal -->
+<div class="overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-add-title">Add expense</span>
+      <button class="modal-close" onclick="closeModal('modal-add')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-field">
+        <label>Description</label>
+        <input type="text" id="f-desc" placeholder="e.g. Dinner at restaurant">
+      </div>
+      <div class="form-row2">
+        <div class="form-field">
+          <label>Amount</label>
+          <input type="number" id="f-amount" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-field">
+          <label>Date</label>
+          <input type="date" id="f-date">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Category</label>
+        <select id="f-cat">
+          <option value="food">🍽 Food & dining</option>
+          <option value="transport">🚗 Transport</option>
+          <option value="entertainment">🎬 Entertainment</option>
+          <option value="utilities">⚡ Utilities</option>
+          <option value="shopping">🛍 Shopping</option>
+          <option value="health">💊 Health</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Split with</label>
+        <div id="friend-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px"></div>
+        <span class="form-hint" id="chips-hint">Tap to select · Add friends in Settings</span>
+      </div>
+      <div class="form-field">
+        <label>Notes (optional)</label>
+        <input type="text" id="f-notes" placeholder="Any extra details…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="del-btn" style="display:none;margin-right:auto" onclick="deleteExpense()">Delete</button>
+      <button class="btn" onclick="closeModal('modal-add')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Budget limit editor (inline per row) -->
+
+<!-- Sign-in screen -->
+<div id="signin-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;padding:2rem">
+  <div style="text-align:center;max-width:380px">
+    <div style="font-size:28px;font-weight:600;letter-spacing:-.5px;margin-bottom:.5rem">split<span style="color:#0D7A5F">wise</span></div>
+    <p style="color:var(--text2);font-size:15px;margin-bottom:2rem">Sign in with Google to sync your budget across all your devices</p>
+    <div id="google-signin-btn"></div>
+    <p style="color:var(--text3);font-size:12px;margin-top:1.5rem">Your data is saved privately to your own Google Drive.<br>No one else can access it.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Google OAuth config ────────────────────────────────────────────────────
+// TO USE THIS APP:
+// 1. Go to https://console.cloud.google.com/
+// 2. Create a project → Enable "Google Drive API"
+// 3. Create OAuth credentials (Web app) → add your file's origin to allowed origins
+// 4. Paste your Client ID below
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE';
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const DATA_FILENAME = 'splitwise-budget.json';
+
+let accessToken = null;
+let driveFileId = null;
+let syncTimeout = null;
+
+// ── State ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'splitwise_data';
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CATS = {food:'🍽',transport:'🚗',entertainment:'🎬',utilities:'⚡',shopping:'🛍',health:'💊',other:'📦'};
+const CAT_NAMES = {food:'Food & dining',transport:'Transport',entertainment:'Entertainment',utilities:'Utilities',shopping:'Shopping',health:'Health',other:'Other'};
+const CAT_COLORS = {food:'#0D7A5F',transport:'#1A5FA0',entertainment:'#C2456A',utilities:'#C07C1A',shopping:'#5B46B8',health:'#B53030',other:'#6B6A65'};
+const CAT_BG = {food:'#E8F5F0',transport:'#EAF1FB',entertainment:'#FBEAF0',utilities:'#FEF3E2',shopping:'#EFEDFC',health:'#FDEAEA',other:'#F0EFE9'};
+
+let now = new Date();
+let currentYear = now.getFullYear();
+let currentMonth = now.getMonth();
+
+function defaultData() {
+  const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
+  const lm = now.getMonth()===0 ? `${y-1}-12` : `${y}-${String(now.getMonth()).padStart(2,'0')}`;
+  return {
+    settings: { currency:'$', monthlyBudget:2000 },
+    friends: [],
+    budgetLimits: { food:500, transport:200, entertainment:150, utilities:300, shopping:200, health:100, other:100 },
+    expenses: [],
+    nextId: 1
+  };
+}
+
+function loadLocalData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData(); }
+  catch(e) { return defaultData(); }
+}
+function saveLocalData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+let data = loadLocalData();
+
+// ── Sync status UI ─────────────────────────────────────────────────────────
+function setSyncStatus(msg, color) {
+  const el = document.getElementById('sync-status');
+  if (el) el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${color||'var(--text3)'};flex-shrink:0"></span>${msg}`;
+}
+
+// ── Google Drive sync ──────────────────────────────────────────────────────
+async function findOrCreateDriveFile() {
+  // Search in appDataFolder
+  const search = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DATA_FILENAME}'&fields=files(id,name)`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const result = await search.json();
+  if (result.files && result.files.length > 0) {
+    driveFileId = result.files[0].id;
+    return driveFileId;
+  }
+  // Create new file
+  const meta = { name: DATA_FILENAME, parents: ['appDataFolder'] };
+  const content = JSON.stringify(defaultData());
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', new Blob([content], { type: 'application/json' }));
+  const create = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: form }
+  );
+  const file = await create.json();
+  driveFileId = file.id;
+  return driveFileId;
+}
+
+async function loadFromDrive() {
+  if (!accessToken) return;
+  setSyncStatus('Syncing…', '#C07C1A');
+  try {
+    await findOrCreateDriveFile();
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const remote = await res.json();
+    // Merge: use remote as source of truth, but keep local if remote is empty/default
+    if (remote && remote.expenses) {
+      data = remote;
+      saveLocalData();
+    }
+    setSyncStatus('Synced', '#0D7A5F');
+    renderAll();
+  } catch(e) {
+    setSyncStatus('Sync error', '#B53030');
+    console.error('Drive load error', e);
+  }
+}
+
+async function saveToDrive() {
+  if (!accessToken || !driveFileId) { saveLocalData(); return; }
+  setSyncStatus('Saving…', '#C07C1A');
+  try {
+    saveLocalData();
+    await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }
+    );
+    setSyncStatus('Synced', '#0D7A5F');
+  } catch(e) {
+    setSyncStatus('Saved locally', '#C07C1A');
+    console.error('Drive save error', e);
+  }
+}
+
+function saveData() {
+  saveLocalData();
+  // Debounce Drive saves — wait 1.5s after last change
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(saveToDrive, 1500);
+}
+
+// ── Google Sign-In ─────────────────────────────────────────────────────────
+function initGoogleAuth() {
+  const signinScreen = document.getElementById('signin-screen');
+
+  if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
+    // Demo mode — no OAuth configured, run offline with localStorage only
+    signinScreen.style.display = 'none';
+    setSyncStatus('Local mode (no sync)', '#9E9D98');
+    renderAll();
+    return;
+  }
+
+  signinScreen.style.display = 'flex';
+
+  google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPES,
+    callback: async (response) => {
+      if (response.error) { setSyncStatus('Sign-in failed', '#B53030'); return; }
+      accessToken = response.access_token;
+      signinScreen.style.display = 'none';
+      document.getElementById('sign-out-btn').style.display = 'flex';
+      await loadFromDrive();
+    }
+  }).requestAccessToken();
+
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: () => {}
+  });
+
+  google.accounts.id.renderButton(
+    document.getElementById('google-signin-btn'),
+    { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', width: 280 }
+  );
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  driveFileId = null;
+  document.getElementById('sign-out-btn').style.display = 'none';
+  setSyncStatus('', '');
+  document.getElementById('signin-screen').style.display = 'flex';
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function cur() { return data.settings.currency || '$'; }
+function fmt(n) { return cur() + Number(n).toFixed(2); }
+function monthKey(y,m) { return `${y}-${String(m+1).padStart(2,'0')}`; }
+function currentKey() { return monthKey(currentYear, currentMonth); }
+function expensesForMonth(y,m) {
+  const k = monthKey(y,m);
+  return data.expenses.filter(e => e.date && e.date.startsWith(k));
+}
+function totalSpend(exps) { return exps.reduce((s,e) => s+e.amount, 0); }
+function owedFrom(e) {
+  if (!e.splits.length || e.settled) return 0;
+  return (e.amount / (e.splits.length + 1)) * e.splits.length;
+}
+function totalOwed(exps) { return exps.reduce((s,e) => s+owedFrom(e), 0); }
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function saveSetting(key, val) { data.settings[key] = val; saveData(); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn, .mob-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderAll();
+}
+
+function prevMonth() {
+  currentMonth--;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderAll();
+}
+function nextMonth() {
+  currentMonth++;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderAll();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderAll() {
+  const exps = expensesForMonth(currentYear, currentMonth);
+  const mLabel = MONTHS[currentMonth] + ' ' + currentYear;
+  document.querySelectorAll('#month-display,#month-display2,#month-display3,#month-display4').forEach(el => { if(el) el.textContent = mLabel; });
+  const sideMonth = document.getElementById('sidebar-month');
+  if (sideMonth) sideMonth.textContent = mLabel;
+  renderMetrics(exps);
+  renderRecentExpenses(exps);
+  renderAllExpenses(exps);
+  renderSplits();
+  renderInsights(exps);
+  renderBudget(exps);
+  renderSettings();
+}
+
+function expenseRowHTML(e) {
+  const owed = owedFrom(e);
+  const splitText = e.splits.length ? `Split with ${e.splits.join(', ')}` : 'Personal';
+  return `<div class="expense-row" onclick="editExpense(${e.id})">
+    <div class="cat-dot" style="background:${CAT_BG[e.cat]||CAT_BG.other}">${CATS[e.cat]||CATS.other}</div>
+    <div class="exp-info">
+      <div class="exp-name">${e.desc}${e.splits.length ? `<span class="pill ${e.settled?'pill-settled':'pill-pending'}">${e.settled?'settled':'pending'}</span>` : ''}</div>
+      <div class="exp-meta">${e.date} · ${CAT_NAMES[e.cat]||'Other'} · ${splitText}${e.notes?` · ${e.notes}`:''}</div>
+    </div>
+    <div class="exp-right">
+      <div class="exp-amount">${fmt(e.amount)}</div>
+      ${owed>0 ? `<div class="exp-owed">+${fmt(owed)} back</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderMetrics(exps) {
+  const spend = totalSpend(exps);
+  const owed = totalOwed(exps);
+  const budget = data.settings.monthlyBudget || 0;
+  const pct = budget ? Math.min(Math.round(spend/budget*100), 100) : null;
+  const el = document.getElementById('metrics');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="metric"><div class="metric-label">Total spending</div><div class="metric-value">${fmt(spend)}</div>${budget?`<div class="metric-sub">${pct}% of ${fmt(budget)} budget</div>`:'<div class="metric-sub">&nbsp;</div>'}</div>
+    <div class="metric"><div class="metric-label">Owed to you</div><div class="metric-value c-green">${fmt(owed)}</div><div class="metric-sub">from friends</div></div>
+    <div class="metric"><div class="metric-label">Out of pocket</div><div class="metric-value c-amber">${fmt(spend - owed)}</div><div class="metric-sub">your actual cost</div></div>
+    <div class="metric"><div class="metric-label">Expenses logged</div><div class="metric-value">${exps.length}</div><div class="metric-sub">this month</div></div>
+  `;
+}
+
+function renderRecentExpenses(exps) {
+  const el = document.getElementById('recent-expenses');
+  if (!el) return;
+  const sorted = [...exps].sort((a,b) => b.date.localeCompare(a.date)).slice(0,5);
+  el.innerHTML = sorted.length ? sorted.map(expenseRowHTML).join('') : '<div class="empty-state">No expenses this month<p>Hit + Add expense to get started</p></div>';
+}
+
+function renderAllExpenses(exps) {
+  const el = document.getElementById('all-expenses');
+  if (!el) return;
+  const cat = document.getElementById('filter-cat')?.value || '';
+  const filtered = [...exps].filter(e => !cat || e.cat===cat).sort((a,b) => b.date.localeCompare(a.date));
+  el.innerHTML = filtered.length ? filtered.map(expenseRowHTML).join('') : '<div class="empty-state">No expenses found<p>Try changing the filter or add a new expense</p></div>';
+}
+
+function renderSplits() {
+  const pending = data.expenses.filter(e => e.splits.length && !e.settled);
+  const byPerson = {};
+  pending.forEach(e => {
+    const per = e.amount / (e.splits.length + 1);
+    e.splits.forEach(p => {
+      if (!byPerson[p]) byPerson[p] = { total:0, items:[], ids:[] };
+      byPerson[p].total += per;
+      byPerson[p].items.push(e.desc);
+      byPerson[p].ids.push(e.id);
+    });
+  });
+  const totalPendingOwed = Object.values(byPerson).reduce((s,v) => s+v.total, 0);
+  const summaryEl = document.getElementById('splits-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="metric"><div class="metric-label">Total pending</div><div class="metric-value c-amber">${fmt(totalPendingOwed)}</div><div class="metric-sub">across all friends</div></div>
+      <div class="metric"><div class="metric-label">Friends with balance</div><div class="metric-value">${Object.keys(byPerson).length}</div><div class="metric-sub">people owe you</div></div>
+      <div class="metric"><div class="metric-label">Pending expenses</div><div class="metric-value">${pending.length}</div><div class="metric-sub">not yet settled</div></div>
+    `;
+  }
+  const el = document.getElementById('splits-list');
+  if (!el) return;
+  if (!Object.keys(byPerson).length) {
+    el.innerHTML = '<div class="no-splits"><div style="font-size:2rem;margin-bottom:.5rem">🎉</div><div style="font-size:15px;font-weight:500;color:var(--text)">All settled up!</div><p style="margin-top:.25rem;font-size:13px">No pending splits right now</p></div>';
+    return;
+  }
+  el.innerHTML = Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total).map(([p,d]) => `
+    <div class="split-card">
+      <div class="split-header">
+        <div class="split-person"><div class="avatar">${initials(p)}</div><div><div class="split-name">${p}</div><div style="font-size:12px;color:var(--text3)">${d.ids.length} expense${d.ids.length>1?'s':''}</div></div></div>
+        <div class="split-amount">${fmt(d.total)}</div>
+      </div>
+      <div class="split-items">${d.items.join(' · ')}</div>
+      <button class="btn" style="margin-top:.5rem;font-size:12px" onclick="settlePerson('${p}')">Mark settled ✓</button>
+    </div>`).join('');
+}
+
+function renderInsights(exps) {
+  const byCat = {};
+  exps.forEach(e => { byCat[e.cat] = (byCat[e.cat]||0) + e.amount; });
+  const maxVal = Math.max(...Object.values(byCat), 1);
+  const catEl = document.getElementById('cat-chart');
+  if (catEl) {
+    catEl.innerHTML = Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([c,v]) => `
+      <div class="chart-row">
+        <div class="chart-lbl">${CATS[c]} ${CAT_NAMES[c]||c}</div>
+        <div class="chart-track">
+          <div class="chart-fill" style="width:${Math.round(v/maxVal*100)}%;background:${CAT_COLORS[c]||'#888'}">
+            <span class="chart-val" style="color:#fff">${fmt(v)}</span>
+          </div>
+        </div>
+      </div>`).join('') || '<p style="color:var(--text3);font-size:13px">No expenses this month</p>';
+  }
+  const momEl = document.getElementById('mom-grid');
+  if (momEl) {
+    let rows = '';
+    for (let i=5; i>=0; i--) {
+      let m = currentMonth - i, y = currentYear;
+      if (m < 0) { m += 12; y--; }
+      const e = expensesForMonth(y,m);
+      const isCurrent = (m === currentMonth && y === currentYear);
+      rows += `<div class="mom-card${isCurrent?' mom-current':''}">
+        <div class="mom-month">${MONTHS[m].slice(0,3)} ${y}</div>
+        <div class="mom-val">${fmt(totalSpend(e))}</div>
+      </div>`;
+    }
+    momEl.innerHTML = rows;
+  }
+}
+
+function renderBudget(exps) {
+  const el = document.getElementById('budget-bars');
+  if (!el) return;
+  const byCat = {};
+  exps.forEach(e => { byCat[e.cat] = (byCat[e.cat]||0) + e.amount; });
+  el.innerHTML = Object.entries(CAT_NAMES).map(([c,name]) => {
+    const spent = byCat[c] || 0;
+    const limit = data.budgetLimits[c] || 0;
+    const pct = limit ? Math.min(Math.round(spent/limit*100), 100) : 0;
+    const over = limit && spent > limit;
+    const color = over ? '#B53030' : pct > 75 ? '#C07C1A' : '#0D7A5F';
+    return `<div class="budget-row">
+      <div class="budget-meta">
+        <span class="budget-name">${CATS[c]} ${name}</span>
+        <span class="budget-nums">
+          ${fmt(spent)} /
+          <input type="number" value="${limit||''}" placeholder="no limit" min="0"
+            style="width:80px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:'DM Mono',monospace;font-size:12px;background:var(--surface);color:var(--text);outline:none;text-align:right"
+            onchange="setBudgetLimit('${c}',parseFloat(this.value)||0)">
+          ${limit ? `<span style="color:${over?'var(--red)':'var(--text3)'}">${over?'⚠ over':pct+'%'}</span>` : ''}
+        </span>
+      </div>
+      ${limit ? `<div class="budget-track"><div class="budget-fill" style="width:${pct}%;background:${color}"></div></div>` : '<div class="budget-track"><div style="height:100%;background:var(--border);border-radius:20px;width:100%;opacity:.4"></div></div>'}
+    </div>`;
+  }).join('');
+}
+
+function renderSettings() {
+  const ci = document.getElementById('set-currency');
+  const bi = document.getElementById('set-budget');
+  if (ci) ci.value = data.settings.currency || '$';
+  if (bi) bi.value = data.settings.monthlyBudget || '';
+  renderSettingsFriends();
+}
+
+function setBudgetLimit(cat, val) {
+  data.budgetLimits[cat] = val;
+  saveData();
+  renderAll();
+}
+
+// ── Friends / chips ────────────────────────────────────────────────────────
+let selectedSplits = [];
+
+function renderModalChips() {
+  const friends = data.friends || [];
+  const el = document.getElementById('friend-chips');
+  if (!el) return;
+  if (!friends.length) {
+    el.innerHTML = '<span style="font-size:13px;color:var(--text3)">No friends added yet — go to Settings to add some</span>';
+    return;
+  }
+  el.innerHTML = friends.map(f => `
+    <div class="chip ${selectedSplits.includes(f)?'selected':''}" onclick="toggleChip('${f}')">${f}</div>
+  `).join('');
+}
+
+function toggleChip(name) {
+  if (selectedSplits.includes(name)) {
+    selectedSplits = selectedSplits.filter(n => n !== name);
+  } else {
+    selectedSplits.push(name);
+  }
+  renderModalChips();
+}
+
+function renderSettingsFriends() {
+  const el = document.getElementById('settings-friend-chips');
+  if (!el) return;
+  const friends = data.friends || [];
+  if (!friends.length) {
+    el.innerHTML = '<span style="font-size:13px;color:var(--text3)">No friends added yet</span>';
+    return;
+  }
+  el.innerHTML = friends.map(f => `
+    <div class="chip" style="cursor:default">${f}<span class="chip-remove" onclick="removeFriend('${f}')" title="Remove">×</span></div>
+  `).join('');
+}
+
+function addFriend() {
+  const input = document.getElementById('new-friend-name');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!data.friends) data.friends = [];
+  if (data.friends.includes(name)) { showToast('Already in your list'); return; }
+  data.friends.push(name);
+  saveData();
+  input.value = '';
+  renderSettingsFriends();
+  showToast(`${name} added`);
+}
+
+function removeFriend(name) {
+  data.friends = (data.friends || []).filter(f => f !== name);
+  saveData();
+  renderSettingsFriends();
+  showToast(`${name} removed`);
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modal-add-title').textContent = 'Add expense';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-cat').value = 'food';
+  document.getElementById('f-notes').value = '';
+  selectedSplits = [];
+  renderModalChips();
+  document.getElementById('del-btn').style.display = 'none';
+  document.getElementById('modal-add').classList.add('open');
+}
+
+function editExpense(id) {
+  const e = data.expenses.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('modal-add-title').textContent = 'Edit expense';
+  document.getElementById('edit-id').value = id;
+  document.getElementById('f-desc').value = e.desc;
+  document.getElementById('f-amount').value = e.amount;
+  document.getElementById('f-date').value = e.date;
+  document.getElementById('f-cat').value = e.cat;
+  document.getElementById('f-notes').value = e.notes || '';
+  selectedSplits = [...(e.splits || [])];
+  renderModalChips();
+  document.getElementById('del-btn').style.display = 'inline-flex';
+  document.getElementById('modal-add').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function saveExpense() {
+  const desc = document.getElementById('f-desc').value.trim();
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const date = document.getElementById('f-date').value;
+  const cat = document.getElementById('f-cat').value;
+  const notes = document.getElementById('f-notes').value.trim();
+  if (!desc || isNaN(amount) || amount <= 0 || !date) { showToast('Please fill in all required fields'); return; }
+  const splits = [...selectedSplits];
+  const editId = parseInt(document.getElementById('edit-id').value);
+  if (editId) {
+    const idx = data.expenses.findIndex(e => e.id === editId);
+    if (idx !== -1) data.expenses[idx] = { ...data.expenses[idx], desc, amount, date, cat, splits, notes };
+    showToast('Expense updated');
+  } else {
+    data.expenses.push({ id: data.nextId++, desc, amount, date, cat, splits, settled: false, notes });
+    showToast('Expense added');
+  }
+  saveData();
+  closeModal('modal-add');
+  renderAll();
+}
+
+function deleteExpense() {
+  const id = parseInt(document.getElementById('edit-id').value);
+  if (!id) return;
+  if (!confirm('Delete this expense?')) return;
+  data.expenses = data.expenses.filter(e => e.id !== id);
+  saveData();
+  closeModal('modal-add');
+  renderAll();
+  showToast('Expense deleted');
+}
+
+function settlePerson(person) {
+  data.expenses.forEach(e => { if (e.splits.includes(person)) e.settled = true; });
+  saveData();
+  renderAll();
+  showToast(`${person} marked as settled`);
+}
+
+// ── Export / Reset ─────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['Date','Description','Category','Amount','Split with','Settled','Notes']];
+  data.expenses.sort((a,b) => b.date.localeCompare(a.date)).forEach(e => {
+    rows.push([e.date, e.desc, CAT_NAMES[e.cat]||e.cat, e.amount.toFixed(2), e.splits.join(';'), e.settled?'Yes':'No', e.notes||'']);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'expenses.csv';
+  a.click();
+  showToast('CSV exported');
+}
+
+function clearAll() {
+  if (!confirm('This will delete all your data. Are you sure?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = defaultData();
+  saveData();
+  renderAll();
+  showToast('All data cleared');
+}
+
+// Close modal on backdrop click
+document.getElementById('modal-add').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('modal-add');
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+// Run locally first, then init Google auth once script loads
+renderAll();
+window.addEventListener('load', () => {
+  if (typeof google !== 'undefined') {
+    initGoogleAuth();
+  } else {
+    // Google script not loaded (offline), run in local mode
+    setSyncStatus('Local mode (no sync)', '#9E9D98');
+  }
+});
+</script>
+</body>
+</html>
